@@ -156,7 +156,7 @@ export default function Dashboard() {
           background: 'linear-gradient(90deg, #E5D3BC 0%, #e9d9c6 100%)',
           width: '100%',
           px: '50px', // Changed from 4 to 50px
-          py: 2,
+          py: 1.5,
           display: 'flex',
           alignItems: 'center',
           boxSizing: 'border-box',
