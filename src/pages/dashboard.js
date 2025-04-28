@@ -168,8 +168,8 @@ export default function Dashboard() {
           <Image
             src="/logo.png" 
             alt="Advisor Connect"
-            width={150}         
-            height={56}         
+            width={200}         
+            height={74}         
             style={{
               marginRight: '24px',
               objectFit: 'contain',
