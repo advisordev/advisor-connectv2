@@ -194,8 +194,8 @@ export default function Dashboard() {
             px: 2,
             py: 1,
             '&:hover': { 
-              color: '#1D4ED8',
-              backgroundColor: 'rgba(29, 78, 216, 0.04)'
+              color: '#000000',
+              backgroundColor: 'rgba(0, 0, 0, 0.04)'
             },
           }}
         >
@@ -213,8 +213,8 @@ export default function Dashboard() {
             px: 2,
             py: 1,
             '&:hover': { 
-              color: '#1D4ED8',
-              backgroundColor: 'rgba(29, 78, 216, 0.04)'
+              color: '#000000',
+              backgroundColor: 'rgba(0, 0, 0, 0.04)'
             },
           }}
         >
@@ -1234,7 +1234,7 @@ const RecordsSection = memo(() => {
                onClick={() => setReportDialogOpen(true)}
                sx={{
                  textTransform: 'none',
-                 backgroundColor: '#1D4ED8',
+                 backgroundColor: '#000000',
                  borderRadius: '8px',
                  px: 3,
                  py: 1,
@@ -1620,7 +1620,7 @@ const RecordsSection = memo(() => {
                              textTransform: 'none',
                              fontWeight: 500,
                              fontSize: '1rem',
-                             '&:hover': { backgroundColor: 'transparent', color: '#1D4ED8' }
+                             '&:hover': { backgroundColor: 'transparent', color: '#000000' }
                            }}
                          >
                            {selectedRow['Business Phone'].replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}
@@ -1641,7 +1641,7 @@ const RecordsSection = memo(() => {
                          <Button 
                            onClick={() => window.open(`mailto:${selectedRow['Email']}`, '_blank')}
                            sx={{ 
-                             color: '#1D4ED8', 
+                             color: '#000000', 
                              p: 0, 
                              textTransform: 'none',
                              fontWeight: 500,
@@ -2011,8 +2011,8 @@ function AccountMenu() {
          px: 2,
          py: 1,
          '&:hover': { 
-           color: '#1D4ED8',
-           backgroundColor: 'rgba(29, 78, 216, 0.04)'
+           color: '#000000',
+           backgroundColor: 'rgba(0, 0, 0, 0.04)'
          },
        }}
      >
