@@ -49,7 +49,7 @@ const AboutNavigation = ({ activeTab, handleTabChange }) => {
           sx={{ 
             display: 'flex', 
             alignItems: 'center',
-            color: '#1D4ED8',
+            color: '#000000',
             fontWeight: activeTab === null ? 600 : 400 
           }}
         >
@@ -60,7 +60,7 @@ const AboutNavigation = ({ activeTab, handleTabChange }) => {
             sx={{ 
               display: 'flex', 
               alignItems: 'center',
-              color: '#1D4ED8',
+              color: '#000000',
               fontWeight: 600 
             }}
           >
@@ -92,7 +92,7 @@ const AboutNavigation = ({ activeTab, handleTabChange }) => {
             fontSize: '1rem',
             py: 2,
             '&.Mui-selected': {
-              color: '#1D4ED8'
+              color: '#000000'
             }
           }
         }}
