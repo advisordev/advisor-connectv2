@@ -571,17 +571,12 @@ const RecordsSection = memo(() => {
           setData(filteredData);
           setTotal(filteredData.length);
         } else if (filterReports) {
-          // If a report list is selected, filter the data client-side
+          // Use the saved report data directly
           const reports = getReportLists();
-          const reportList = reports[filterReports] || [];
-          const reportEmails = reportList.map(item => item.Email);
+          const reportData = reports[filterReports] || [];
           
-          const filteredData = result.data.filter(row => 
-            reportEmails.includes(row.Email)
-          );
-          
-          setData(filteredData);
-          setTotal(filteredData.length);
+          setData(reportData);
+          setTotal(reportData.length);
         } else {
           setData(result.data);
           setTotal(result.total);
