@@ -185,8 +185,8 @@ export default function Reports() {
             px: 2,
             py: 1,
             '&:hover': { 
-              color: '#1D4ED8',
-              backgroundColor: 'rgba(29, 78, 216, 0.04)'
+              color: '#000000',
+              backgroundColor: 'rgba(0, 0, 0, 0.04)'
             },
           }}
         >
@@ -204,8 +204,8 @@ export default function Reports() {
             px: 2,
             py: 1,
             '&:hover': { 
-              color: '#1D4ED8',
-              backgroundColor: 'rgba(29, 78, 216, 0.04)'
+              color: '#000000',
+              backgroundColor: 'rgba(0, 0, 0, 0.04)'
             },
           }}
         >
@@ -818,7 +818,7 @@ export default function Reports() {
                               textTransform: 'none',
                               fontWeight: 500,
                               fontSize: '1rem',
-                              '&:hover': { backgroundColor: 'transparent', color: '#1D4ED8' }
+                              '&:hover': { backgroundColor: 'transparent', color: '#000000' }
                             }}
                           >
                             {selectedRow['Business Phone'].replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}
@@ -839,7 +839,7 @@ export default function Reports() {
                           <Button 
                             onClick={() => window.open(`mailto:${selectedRow['Email']}`, '_blank')}
                             sx={{ 
-                              color: '#1D4ED8', 
+                              color: '#000000', 
                               p: 0, 
                               textTransform: 'none',
                               fontWeight: 500,
@@ -1087,8 +1087,8 @@ function AccountMenu() {
           px: 2,
           py: 1,
           '&:hover': { 
-            color: '#1D4ED8',
-            backgroundColor: 'rgba(29, 78, 216, 0.04)'
+            color: '#000000',
+            backgroundColor: 'rgba(0, 0, 0, 0.04)'
           },
         }}
       >
@@ -1157,7 +1157,7 @@ function AccountMenu() {
             px: 2.5,
             fontSize: '0.95rem',
             backgroundColor: '#f8fafc',
-            color: '#1D4ED8',
+            color: '#000000',
             fontWeight: 600
           }}
         >
