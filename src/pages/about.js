@@ -27,6 +27,7 @@ import IncludedFirms from '../components/about/IncludedFirms';
 
 export default function About() {
   const router = useRouter();
+  // Removed the unused isMobile variable
   const [activeTab, setActiveTab] = useState(0);
   
   // Get the section from URL query params or default to 0
@@ -330,11 +331,11 @@ export default function About() {
 function AccountMenu() {
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
-  
+  const isMobile = useMediaQuery('(max-width:600px)');
 
-  const handleMouseEnter = (event) => setAnchorEl(event.currentTarget);
-  const handleClick = (event) => setAnchorEl(event.currentTarget);
-  const handleMouseLeave = () => setAnchorEl(null);
+  const handleMouseEnter = (event) => !isMobile && setAnchorEl(event.currentTarget);
+  const handleClick = (event) => isMobile && setAnchorEl(event.currentTarget);
+  const handleMouseLeave = () => !isMobile && setAnchorEl(null);
   const handleClose = () => setAnchorEl(null);
 
   const handleAccountInfo = () => {
@@ -389,7 +390,8 @@ function AccountMenu() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         MenuListProps={{ 
-          onMouseLeave: handleMouseLeave
+          onMouseLeave: handleMouseLeave,
+          dense: isMobile
         }}
         PaperProps={{
           sx: {
