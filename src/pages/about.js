@@ -196,8 +196,8 @@ export default function About() {
             px: { xs: 1.5, md: 2 },
             py: 1,
             '&:hover': { 
-              color: '#1D4ED8',
-              backgroundColor: 'rgba(29, 78, 216, 0.04)'
+              color: '#000000',
+              backgroundColor: 'rgba(0, 0, 0, 0.04)'
             },
           }}
         >
@@ -205,8 +205,8 @@ export default function About() {
         </Button>
         <Button
           sx={{
-            color: '#1D4ED8',
-            backgroundColor: 'rgba(29, 78, 216, 0.04)',
+            color: '#000000',
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
             fontWeight: 600,
             mr: { xs: 1, md: 3 },
             fontSize: { xs: '0.9rem', md: '1rem' },
@@ -376,8 +376,8 @@ function AccountMenu() {
           px: { xs: 1.5, md: 2 },
           py: 1,
           '&:hover': { 
-            color: '#1D4ED8',
-            backgroundColor: 'rgba(29, 78, 216, 0.04)'
+            color: '#000000',
+            backgroundColor: 'rgba(0, 0, 0, 0.04)'
           },
         }}
       >
