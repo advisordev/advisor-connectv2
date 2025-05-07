@@ -290,6 +290,12 @@ const RecordsSection = memo(() => {
   // New states for Report functionality
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [newReportName, setNewReportName] = useState('');
+  
+  // Cache for storing the full dataset for client-side operations
+  const [filteredDataCache, setFilteredDataCache] = useState({
+    favorites: {},
+    reports: {}
+  });
 
   // Favorites management functions
   const getFavoriteLists = useCallback(() => {
@@ -302,6 +308,8 @@ const RecordsSection = memo(() => {
 
   const saveFavoriteLists = useCallback((lists) => {
     localStorage.setItem('favoriteLists', JSON.stringify(lists));
+    // Update favorites list options immediately after saving
+    setFavoritesListOptions(Object.keys(lists));
   }, []);
 
   // Report management functions
@@ -315,7 +323,149 @@ const RecordsSection = memo(() => {
 
   const saveReportLists = useCallback((lists) => {
     localStorage.setItem('reportLists', JSON.stringify(lists));
+    // Update report list options immediately after saving
+    setReportListOptions(Object.keys(lists));
   }, []);
+
+  // Helper function to apply sorting to any dataset
+  const applySorting = useCallback((dataArray) => {
+    return [...dataArray].sort((a, b) => {
+      let valA = a[sortBy];
+      let valB = b[sortBy];
+      
+      // Handle null values
+      if (valA === null || valA === undefined) valA = '';
+      if (valB === null || valB === undefined) valB = '';
+      
+      // Convert to strings for string comparison if not numbers
+      if (typeof valA !== 'number') valA = String(valA).toLowerCase();
+      if (typeof valB !== 'number') valB = String(valB).toLowerCase();
+      
+      // Perform the actual comparison
+      if (sortDir === 'asc') {
+        return valA > valB ? 1 : valA < valB ? -1 : 0;
+      } else {
+        return valA < valB ? 1 : valA > valB ? -1 : 0;
+      }
+    });
+  }, [sortBy, sortDir]);
+
+  // Helper function to apply pagination to a dataset
+  const applyPagination = useCallback((dataArray) => {
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    return dataArray.slice(start, Math.min(end, dataArray.length));
+  }, [page, limit]);
+
+  // Helper function to process favorites data
+  const processFavoritesData = useCallback(async () => {
+    setLoading(true);
+    
+    try {
+      // Check if we have cached data
+      if (filteredDataCache.favorites[filterFavorites]) {
+        const sortedData = applySorting(filteredDataCache.favorites[filterFavorites]);
+        setData(applyPagination(sortedData));
+        setTotal(sortedData.length);
+        setLoading(false);
+        return;
+      }
+      
+      const favoritesList = getFavoriteLists()[filterFavorites] || [];
+      const favoritesEmails = favoritesList.map(item => item.Email);
+      
+      if (favoritesEmails.length === 0) {
+        setData([]);
+        setTotal(0);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch all data matching other filters, then filter by favorites
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '10000', // Get all matching records
+        province: filterProvince,
+        city: filterCity,
+        firm: filterFirm,
+        team: filterTeam,
+      });
+      
+      const response = await fetch(`/api/data?${params.toString()}`);
+      const result = await response.json();
+      
+      if (!result || !Array.isArray(result.data)) {
+        throw new Error('API returned unexpected data format');
+      }
+      
+      // Filter by favorites
+      const filteredData = result.data.filter(row => 
+        favoritesEmails.includes(row.Email)
+      );
+      
+      // Cache the filtered data
+      setFilteredDataCache(prev => ({
+        ...prev,
+        favorites: {
+          ...prev.favorites,
+          [filterFavorites]: filteredData
+        }
+      }));
+      
+      // Apply sorting and pagination
+      const sortedData = applySorting(filteredData);
+      setData(applyPagination(sortedData));
+      setTotal(filteredData.length);
+    } catch (err) {
+      console.error('Error processing favorites data:', err);
+      setError(err.message || 'Failed to process favorites data');
+      setData([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [filterFavorites, filterProvince, filterCity, filterFirm, filterTeam, 
+      getFavoriteLists, applySorting, applyPagination, filteredDataCache]);
+
+  // Helper function to process report data
+  const processReportData = useCallback(() => {
+    setLoading(true);
+    
+    try {
+      // Check if we have cached data
+      if (filteredDataCache.reports[filterReports]) {
+        const sortedData = applySorting(filteredDataCache.reports[filterReports]);
+        setData(applyPagination(sortedData));
+        setTotal(sortedData.length);
+        setLoading(false);
+        return;
+      }
+      
+      const reports = getReportLists();
+      const reportData = reports[filterReports] || [];
+      
+      // Cache the report data
+      setFilteredDataCache(prev => ({
+        ...prev,
+        reports: {
+          ...prev.reports,
+          [filterReports]: reportData
+        }
+      }));
+      
+      // Apply sorting and pagination
+      const sortedData = applySorting(reportData);
+      setData(applyPagination(sortedData));
+      setTotal(reportData.length);
+    } catch (err) {
+      console.error('Error processing report data:', err);
+      setError(err.message || 'Failed to process report data');
+      setData([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [filterReports, getReportLists, applySorting, applyPagination, filteredDataCache]);
 
   // Save current filtered data as report
   const saveAsReport = async () => {
@@ -332,48 +482,63 @@ const RecordsSection = memo(() => {
       return;
     }
 
-    // Fetch ALL data with current filters (not just current page)
     try {
-      const params = new URLSearchParams({
-        page: '1',
-        limit: '10000', // Large number to get all rows
-        sortBy,
-        sortDir,
-        province: filterProvince,
-        city: filterCity,
-        firm: filterFirm,
-        team: filterTeam,
-        favorites: filterFavorites,
-      });
+      let reportData = [];
       
-      const response = await fetch(`/api/data?${params.toString()}`);
-      const result = await response.json();
-      
-      if (!result || !Array.isArray(result.data)) {
-        setSnackbarMessage('Error fetching data for report');
-        setSnackbarOpen(true);
-        return;
-      }
-      
-      let allData = result.data;
-      
-      // If a favorites list is selected, filter the data client-side
-      if (filterFavorites) {
-        const lists = getFavoriteLists();
-        const favoritesList = lists[filterFavorites] || [];
-        const favoritesEmails = favoritesList.map(item => item.Email);
+      // If filtering by favorites, use cached favorites data
+      if (filterFavorites && filteredDataCache.favorites[filterFavorites]) {
+        reportData = filteredDataCache.favorites[filterFavorites];
+      } 
+      // If filtering by another report, use that report's data
+      else if (filterReports && filteredDataCache.reports[filterReports]) {
+        reportData = filteredDataCache.reports[filterReports];
+      } 
+      // Otherwise fetch all data with current filters
+      else {
+        const params = new URLSearchParams({
+          page: '1',
+          limit: '10000', // Large number to get all rows
+          province: filterProvince,
+          city: filterCity,
+          firm: filterFirm,
+          team: filterTeam,
+        });
         
-        allData = allData.filter(row => 
-          favoritesEmails.includes(row.Email)
-        );
+        const response = await fetch(`/api/data?${params.toString()}`);
+        const result = await response.json();
+        
+        if (!result || !Array.isArray(result.data)) {
+          throw new Error('API returned unexpected data format');
+        }
+        
+        reportData = result.data;
+        
+        // If a favorites list is selected, filter the data client-side
+        if (filterFavorites) {
+          const lists = getFavoriteLists();
+          const favoritesList = lists[filterFavorites] || [];
+          const favoritesEmails = favoritesList.map(item => item.Email);
+          
+          reportData = reportData.filter(row => 
+            favoritesEmails.includes(row.Email)
+          );
+        }
       }
       
-      // Save all filtered data
-      reports[newReportName] = allData;
+      // Save the report data
+      reports[newReportName] = reportData;
       saveReportLists(reports);
       
-      setReportListOptions(Object.keys(reports));
-      setSnackbarMessage(`Saved report "${newReportName}" with ${allData.length} advisors`);
+      // Update the cache
+      setFilteredDataCache(prev => ({
+        ...prev,
+        reports: {
+          ...prev.reports,
+          [newReportName]: reportData
+        }
+      }));
+      
+      setSnackbarMessage(`Saved report "${newReportName}" with ${reportData.length} advisors`);
       setSnackbarOpen(true);
       setReportDialogOpen(false);
       setNewReportName('');
@@ -384,16 +549,25 @@ const RecordsSection = memo(() => {
     }
   };
 
-  // Fetch filter options whenever temporary filters change
+  // Load favorites and report lists from localStorage on mount
   useEffect(() => {
-    // Load favorites list options from localStorage
     const favoriteLists = getFavoriteLists();
     setFavoritesListOptions(Object.keys(favoriteLists));
     
-    // Load report list options from localStorage
     const reportLists = getReportLists();
     setReportListOptions(Object.keys(reportLists));
-    
+  }, [getFavoriteLists, getReportLists]);
+  
+  // Reset filtered data cache when filters change
+  useEffect(() => {
+    setFilteredDataCache({
+      favorites: {},
+      reports: {}
+    });
+  }, [filterProvince, filterCity, filterFirm, filterTeam]);
+
+  // Fetch filter options whenever temporary filters change
+  useEffect(() => {
     const params = new URLSearchParams({
       province: tempFilterProvince,
       city: tempFilterCity,
@@ -409,7 +583,7 @@ const RecordsSection = memo(() => {
         // If a favorites list is selected, filter the options to only include
         // values that exist in the favorites list
         if (tempFilterFavorites) {
-          const favoritesList = favoriteLists[tempFilterFavorites] || [];
+          const favoritesList = getFavoriteLists()[tempFilterFavorites] || [];
           
           // First, get all data with current filters to know what's available
           const dataParams = new URLSearchParams({
@@ -443,7 +617,7 @@ const RecordsSection = memo(() => {
         } else if (tempFilterReports) {
           // If a report list is selected, filter the options to only include
           // values that exist in the report list
-          const reportList = reportLists[tempFilterReports] || [];
+          const reportList = getReportLists()[tempFilterReports] || [];
           
           // Extract unique values for each filter from the report
           const repProvinces = [...new Set(reportList.map(row => row.Province).filter(Boolean))];
@@ -466,90 +640,73 @@ const RecordsSection = memo(() => {
       .catch(err => console.error('Error fetching filter options:', err));
   }, [tempFilterProvince, tempFilterCity, tempFilterFirm, tempFilterTeam, tempFilterFavorites, tempFilterReports, getFavoriteLists, getReportLists]);
 
-  // Fetch data whenever page, sorting, or filters change
+  // Main data fetching effect
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
-    setError('');
     
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
-      sortBy,
-      sortDir,
-      province: filterProvince,
-      city: filterCity,
-      firm: filterFirm,
-      team: filterTeam,
-      favorites: filterFavorites,
-      reports: filterReports,
-    });
-    
-    fetch(`/api/data?${params.toString()}`)
-      .then(res => res.json())
-      .then(result => {
-        if (!isMounted) return;
-        if (!result || !Array.isArray(result.data) || typeof result.total !== 'number') {
-          setError('API returned unexpected data format');
-          setLoading(false);
+    const fetchData = async () => {
+      setLoading(true);
+      setError('');
+      
+      try {
+        // Handle favorites list filtering
+        if (filterFavorites) {
+          if (isMounted) {
+            await processFavoritesData();
+          }
           return;
         }
         
-        // If a favorites list is selected, filter the data client-side
-        if (filterFavorites) {
-          const lists = getFavoriteLists();
-          const favoritesList = lists[filterFavorites] || [];
-          const favoritesEmails = favoritesList.map(item => item.Email);
-          
-          const filteredData = result.data.filter(row => 
-            favoritesEmails.includes(row.Email)
-          );
-          
-          setData(filteredData);
-          setTotal(filteredData.length);
-        } else if (filterReports) {
-          // Use the saved report data directly and apply client-side sorting
-          const reports = getReportLists();
-          let reportData = reports[filterReports] || [];
-          
-          // Apply client-side sorting for report lists - THIS IS THE FIX
-          reportData = [...reportData].sort((a, b) => {
-            let valA = a[sortBy];
-            let valB = b[sortBy];
-            
-            // Handle null values
-            if (valA === null || valA === undefined) valA = '';
-            if (valB === null || valB === undefined) valB = '';
-            
-            // Convert to strings for string comparison if not numbers
-            if (typeof valA !== 'number') valA = String(valA).toLowerCase();
-            if (typeof valB !== 'number') valB = String(valB).toLowerCase();
-            
-            // Perform the actual comparison
-            if (sortDir === 'asc') {
-              return valA > valB ? 1 : valA < valB ? -1 : 0;
-            } else {
-              return valA < valB ? 1 : valA > valB ? -1 : 0;
-            }
-          });
-          
-          setData(reportData);
-          setTotal(reportData.length);
-        } else {
-          setData(result.data);
-          setTotal(result.total);
+        // Handle report list filtering
+        if (filterReports) {
+          if (isMounted) {
+            processReportData();
+          }
+          return;
         }
         
-        setLoading(false);
-      })
-      .catch(err => {
+        // Standard server-side filtering, sorting, and paging
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(limit),
+          sortBy,
+          sortDir,
+          province: filterProvince,
+          city: filterCity,
+          firm: filterFirm,
+          team: filterTeam,
+        });
+        
+        const response = await fetch(`/api/data?${params.toString()}`);
+        const result = await response.json();
+        
         if (!isMounted) return;
+        
+        if (!result || !Array.isArray(result.data) || typeof result.total !== 'number') {
+          throw new Error('API returned unexpected data format');
+        }
+        
+        setData(result.data);
+        setTotal(result.total);
+      } catch (err) {
+        if (!isMounted) return;
+        
+        console.error('Error fetching data:', err);
         setError(err.message || 'API error');
-        setLoading(false);
-      });
-      
+        setData([]);
+        setTotal(0);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchData();
+    
     return () => { isMounted = false; };
-  }, [page, sortBy, sortDir, filterProvince, filterCity, filterFirm, filterTeam, filterFavorites, filterReports, getFavoriteLists, getReportLists]);
+  }, [page, sortBy, sortDir, filterProvince, filterCity, filterFirm, filterTeam, 
+      filterFavorites, filterReports, processFavoritesData, processReportData, limit]);
 
   const handleSort = (colKey) => {
     if (colKey === sortBy) {
@@ -567,29 +724,53 @@ const RecordsSection = memo(() => {
   };
 
   const doApplyFilters = () => {
+    // Reset page when applying new filters
+    setPage(1);
+    
+    // Apply selected filters
     setFilterProvince(tempFilterProvince);
     setFilterCity(tempFilterCity);
     setFilterFirm(tempFilterFirm);
     setFilterTeam(tempFilterTeam);
-    setFilterFavorites(tempFilterFavorites);
-    setFilterReports(tempFilterReports);
-    setPage(1);
+    
+    // Handle favorites and reports selection (mutually exclusive)
+    if (tempFilterFavorites) {
+      setFilterFavorites(tempFilterFavorites);
+      setFilterReports(''); // Clear reports filter when favorites selected
+    } else if (tempFilterReports) {
+      setFilterReports(tempFilterReports);
+      setFilterFavorites(''); // Clear favorites filter when reports selected
+    } else {
+      setFilterFavorites('');
+      setFilterReports('');
+    }
   };
 
   const doResetFilters = () => {
+    // Reset temporary filter states
     setTempFilterProvince('');
     setTempFilterCity('');
     setTempFilterFirm('');
     setTempFilterTeam('');
     setTempFilterFavorites('');
     setTempFilterReports('');
+    
+    // Reset applied filters
     setFilterProvince('');
     setFilterCity('');
     setFilterFirm('');
     setFilterTeam('');
     setFilterFavorites('');
     setFilterReports('');
+    
+    // Reset to first page
     setPage(1);
+    
+    // Clear filtered data cache
+    setFilteredDataCache({
+      favorites: {},
+      reports: {}
+    });
   };
 
   const openFavoriteDialog = (row) => {
@@ -633,6 +814,20 @@ const RecordsSection = memo(() => {
     } else {
       lists[targetList].push(favoriteRow);
       saveFavoriteLists(lists);
+      
+      // Update the UI
+      setFavoritesListOptions(Object.keys(lists));
+      
+      // Clear the cache for this list to force re-fetch
+      setFilteredDataCache(prev => ({
+        ...prev,
+        favorites: {
+          ...prev.favorites,
+          [targetList]: undefined
+        }
+      }));
+      
+      // Visual feedback
       setRecentlyFavoritedId(uniqueKey);
       setTimeout(() => setRecentlyFavoritedId(null), 2000);
       setSnackbarMessage(`Added to "${targetList}" favorites`);
@@ -951,7 +1146,7 @@ const RecordsSection = memo(() => {
 
   return (
     <Box sx={{ mb: 8 }}>
-      {/* Modern Header Section with Welcome and Filter Controls Side-by-Side */}
+      {/* Redesigned Header with Compact Filter Layout */}
       <Paper elevation={0} sx={{ 
         mb: 3,
         borderRadius: '16px',
@@ -1027,9 +1222,7 @@ const RecordsSection = memo(() => {
           {/* Right Section - Filter Controls */}
           <Box sx={{ 
             display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { xs: 'flex-start', md: 'center' },
-            flexWrap: { xs: 'nowrap', md: 'wrap' },
+            flexDirection: 'column',
             gap: 2,
             flexGrow: 1,
             ml: { md: 3 },
@@ -1038,280 +1231,278 @@ const RecordsSection = memo(() => {
           }}>
             <Box sx={{ 
               display: 'flex', 
-              alignItems: 'center', 
-              mb: { xs: 2, md: 0 },
-              width: { xs: '100%', md: 'auto' }
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
             }}>
-              <FilterListIcon sx={{ color: '#E5D3BC', mr: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '1rem' }}>
-                Filters
-              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+              }}>
+                <FilterListIcon sx={{ color: '#E5D3BC', mr: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1E293B', fontSize: '1rem' }}>
+                  Filters
+                </Typography>
+              </Box>
+              
+              {/* Compact Filter Controls - First Row */}
+              <Box sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 2,
+                ml: 'auto'
+              }}>
+                {/* Province Filter */}
+                <FormControl variant="outlined" size="small" sx={{ minWidth: '120px' }}>
+                  <InputLabel>Province</InputLabel>
+                  <Select
+                    label="Province"
+                    value={tempFilterProvince}
+                    onChange={(e) => setTempFilterProvince(e.target.value)}
+                    IconComponent={ArrowDropDownIcon}
+                    sx={{
+                      borderRadius: '8px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(0,0,0,0.1)'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      }
+                    }}
+                  >
+                    <MenuItemMUI value="">All</MenuItemMUI>
+                    {provinceOptions.map((p) => (
+                      <MenuItemMUI key={p} value={p}>{p}</MenuItemMUI>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {/* City Filter */}
+                <FormControl variant="outlined" size="small" sx={{ minWidth: '120px' }}>
+                  <InputLabel>City</InputLabel>
+                  <Select
+                    label="City"
+                    value={tempFilterCity}
+                    onChange={(e) => setTempFilterCity(e.target.value)}
+                    IconComponent={ArrowDropDownIcon}
+                    sx={{
+                      borderRadius: '8px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(0,0,0,0.1)'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      }
+                    }}
+                  >
+                    <MenuItemMUI value="">All</MenuItemMUI>
+                    {cityOptions.map((c) => (
+                      <MenuItemMUI key={c} value={c}>{c}</MenuItemMUI>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {/* Firm Filter */}
+                <FormControl variant="outlined" size="small" sx={{ minWidth: '120px' }}>
+                  <InputLabel>Firm</InputLabel>
+                  <Select
+                    label="Firm"
+                    value={tempFilterFirm}
+                    onChange={(e) => setTempFilterFirm(e.target.value)}
+                    IconComponent={ArrowDropDownIcon}
+                    sx={{
+                      borderRadius: '8px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(0,0,0,0.1)'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      }
+                    }}
+                  >
+                    <MenuItemMUI value="">All</MenuItemMUI>
+                    {firmOptions.map((f) => (
+                      <MenuItemMUI key={f} value={f}>{f}</MenuItemMUI>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {/* Team Filter */}
+                <FormControl variant="outlined" size="small" sx={{ minWidth: '120px' }}>
+                  <InputLabel>Team</InputLabel>
+                  <Select
+                    label="Team"
+                    value={tempFilterTeam}
+                    onChange={(e) => setTempFilterTeam(e.target.value)}
+                    IconComponent={ArrowDropDownIcon}
+                    sx={{
+                      borderRadius: '8px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(0,0,0,0.1)'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      }
+                    }}
+                  >
+                    <MenuItemMUI value="">All</MenuItemMUI>
+                    {teamOptions.map((t) => (
+                      <MenuItemMUI key={t} value={t}>{t}</MenuItemMUI>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {/* Favorites List */}
+                <FormControl variant="outlined" size="small" sx={{ minWidth: '160px' }}>
+                  <InputLabel>Favorites List</InputLabel>
+                  <Select
+                    label="Favorites List"
+                    value={tempFilterFavorites}
+                    onChange={(e) => {
+                      setTempFilterFavorites(e.target.value);
+                      if (e.target.value) setTempFilterReports('');
+                    }}
+                    IconComponent={ArrowDropDownIcon}
+                    sx={{
+                      borderRadius: '8px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(0,0,0,0.1)'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      }
+                    }}
+                  >
+                    <MenuItemMUI value="">All Favorites</MenuItemMUI>
+                    {favoritesListOptions.map((list) => (
+                      <MenuItemMUI key={list} value={list}>{list}</MenuItemMUI>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {/* Report List */}
+                <FormControl variant="outlined" size="small" sx={{ minWidth: '160px' }}>
+                  <InputLabel>Report List</InputLabel>
+                  <Select
+                    label="Report List"
+                    value={tempFilterReports}
+                    onChange={(e) => {
+                      setTempFilterReports(e.target.value);
+                      if (e.target.value) setTempFilterFavorites('');
+                    }}
+                    IconComponent={ArrowDropDownIcon}
+                    sx={{
+                      borderRadius: '8px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(0,0,0,0.1)'
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E5D3BC'
+                      }
+                    }}
+                  >
+                    <MenuItemMUI value="">All Reports</MenuItemMUI>
+                    {reportListOptions.map((list) => (
+                      <MenuItemMUI key={list} value={list}>{list}</MenuItemMUI>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
             </Box>
             
+            {/* Action Buttons Row */}
             <Box sx={{ 
-              display: 'flex', 
-              gap: 2, 
-              flexWrap: 'wrap',
-              width: '100%',
-              justifyContent: { xs: 'flex-start', md: 'flex-end' },
-              alignItems: 'center' 
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 2,
+              mt: 1,
             }}>
-              <FormControl variant="outlined" size="small" sx={{ minWidth: '180px', flexGrow: { xs: 1, md: 0 } }}>
-                <InputLabel>Favorites List</InputLabel>
-                <Select
-                  label="Favorites List"
-                  value={tempFilterFavorites}
-                  onChange={(e) => {
-                    setTempFilterFavorites(e.target.value);
-                    if (e.target.value) setTempFilterReports('');
-                  }}
-                  IconComponent={ArrowDropDownIcon}
-                  sx={{
-                    borderRadius: '8px',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(0,0,0,0.1)'
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#E5D3BC'
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#E5D3BC'
-                    }
-                  }}
-                >
-                  <MenuItemMUI value="">All Favorites</MenuItemMUI>
-                  {favoritesListOptions.map((list) => (
-                    <MenuItemMUI key={list} value={list}>{list}</MenuItemMUI>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControl variant="outlined" size="small" sx={{ minWidth: '180px', flexGrow: { xs: 1, md: 0 } }}>
-                <InputLabel>Report List</InputLabel>
-                <Select
-                  label="Report List"
-                  value={tempFilterReports}
-                  onChange={(e) => {
-                    setTempFilterReports(e.target.value);
-                    if (e.target.value) setTempFilterFavorites('');
-                  }}
-                  IconComponent={ArrowDropDownIcon}
-                  sx={{
-                    borderRadius: '8px',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(0,0,0,0.1)'
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#E5D3BC'
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#E5D3BC'
-                    }
-                  }}
-                >
-                  <MenuItemMUI value="">All Reports</MenuItemMUI>
-                  {reportListOptions.map((list) => (
-                    <MenuItemMUI key={list} value={list}>{list}</MenuItemMUI>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-          </Box>
-        </Box>
-        
-        {/* Secondary Filter Controls */}
-        <Box sx={{ 
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
-          p: 3,
-          pt: 1.5,
-          backgroundColor: '#f8fafc',
-          borderTop: '1px solid rgba(0,0,0,0.05)'
-        }}>
-          <FormControl variant="outlined" size="small" sx={{ minWidth: '160px', flexGrow: 1 }}>
-            <InputLabel>Province</InputLabel>
-            <Select
-              label="Province"
-              value={tempFilterProvince}
-              onChange={(e) => setTempFilterProvince(e.target.value)}
-              IconComponent={ArrowDropDownIcon}
-              sx={{
-                borderRadius: '8px',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(0,0,0,0.1)'
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                }
-              }}
-            >
-              <MenuItemMUI value="">All Provinces</MenuItemMUI>
-              {provinceOptions.map((p) => (
-                <MenuItemMUI key={p} value={p}>{p}</MenuItemMUI>
-              ))}
-            </Select>
-          </FormControl>
-          
-          <FormControl variant="outlined" size="small" sx={{ minWidth: '160px', flexGrow: 1 }}>
-            <InputLabel>City</InputLabel>
-            <Select
-              label="City"
-              value={tempFilterCity}
-              onChange={(e) => setTempFilterCity(e.target.value)}
-              IconComponent={ArrowDropDownIcon}
-              sx={{
-                borderRadius: '8px',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(0,0,0,0.1)'
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                }
-              }}
-            >
-              <MenuItemMUI value="">All Cities</MenuItemMUI>
-              {cityOptions.map((c) => (
-                <MenuItemMUI key={c} value={c}>{c}</MenuItemMUI>
-              ))}
-            </Select>
-          </FormControl>
-          
-          <FormControl variant="outlined" size="small" sx={{ minWidth: '160px', flexGrow: 1 }}>
-            <InputLabel>Firm</InputLabel>
-            <Select
-              label="Firm"
-              value={tempFilterFirm}
-              onChange={(e) => setTempFilterFirm(e.target.value)}
-              IconComponent={ArrowDropDownIcon}
-              sx={{
-                borderRadius: '8px',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(0,0,0,0.1)'
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                }
-              }}
-            >
-              <MenuItemMUI value="">All Firms</MenuItemMUI>
-              {firmOptions.map((f) => (
-                <MenuItemMUI key={f} value={f}>{f}</MenuItemMUI>
-              ))}
-            </Select>
-          </FormControl>
-          
-          <FormControl variant="outlined" size="small" sx={{ minWidth: '160px', flexGrow: 1 }}>
-            <InputLabel>Team</InputLabel>
-            <Select
-              label="Team"
-              value={tempFilterTeam}
-              onChange={(e) => setTempFilterTeam(e.target.value)}
-              IconComponent={ArrowDropDownIcon}
-              sx={{
-                borderRadius: '8px',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(0,0,0,0.1)'
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5D3BC'
-                }
-              }}
-            >
-              <MenuItemMUI value="">All Teams</MenuItemMUI>
-              {teamOptions.map((t) => (
-                <MenuItemMUI key={t} value={t}>{t}</MenuItemMUI>
-              ))}
-            </Select>
-          </FormControl>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'flex-end', 
-            gap: 2, 
-            mt: { xs: 2, sm: 0 },
-            ml: { sm: 'auto' },
-            width: { xs: '100%', sm: 'auto' }
-          }}>
-            <Button
-              variant="outlined"
-              onClick={doResetFilters}
-              sx={{
-                textTransform: 'none',
-                color: '#6B7280',
-                borderColor: 'rgba(0,0,0,0.1)',
-                borderRadius: '8px',
-                px: 3,
-                py: 1,
-                fontWeight: 500,
-                '&:hover': { 
-                  backgroundColor: 'rgba(0,0,0,0.02)',
-                  borderColor: 'rgba(0,0,0,0.2)'
-                },
-              }}
-            >
-              Reset Filters
-            </Button>
-            <Button
-              variant="contained"
-              onClick={doApplyFilters}
-              sx={{
-                textTransform: 'none',
-                backgroundColor: '#E5D3BC',
-                borderRadius: '8px',
-                px: 3,
-                py: 1,
-                fontWeight: 500,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                '&:hover': { 
-                  backgroundColor: '#d6c3ac',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                },
-              }}
-            >
-              Apply Filters
-            </Button>
-            {(filterProvince || filterCity || filterFirm || filterTeam || filterFavorites || filterReports) && (
               <Button
-                variant="contained"
-                onClick={() => setReportDialogOpen(true)}
+                variant="outlined"
+                onClick={doResetFilters}
                 sx={{
                   textTransform: 'none',
-                  backgroundColor: '#000000',
+                  color: '#6B7280',
+                  borderColor: 'rgba(0,0,0,0.1)',
+                  borderRadius: '8px',
+                  px: 3,
+                  py: 1,
+                  fontWeight: 500,
+                  '&:hover': { 
+                    backgroundColor: 'rgba(0,0,0,0.02)',
+                    borderColor: 'rgba(0,0,0,0.2)'
+                  },
+                }}
+              >
+                Reset Filters
+              </Button>
+              <Button
+                variant="contained"
+                onClick={doApplyFilters}
+                sx={{
+                  textTransform: 'none',
+                  backgroundColor: '#E5D3BC',
                   borderRadius: '8px',
                   px: 3,
                   py: 1,
                   fontWeight: 500,
                   boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
                   '&:hover': { 
-                    backgroundColor: '#1E40AF',
+                    backgroundColor: '#d6c3ac',
                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                   },
                 }}
               >
-                Save as Report
+                Apply Filters
               </Button>
-            )}
+              {(filterProvince || filterCity || filterFirm || filterTeam || filterFavorites || filterReports) && (
+                <Button
+                  variant="contained"
+                  onClick={() => setReportDialogOpen(true)}
+                  sx={{
+                    textTransform: 'none',
+                    backgroundColor: '#000000',
+                    borderRadius: '8px',
+                    px: 3,
+                    py: 1,
+                    fontWeight: 500,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    '&:hover': { 
+                      backgroundColor: '#1E40AF',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    },
+                  }}
+                >
+                  Save as Report
+                </Button>
+              )}
+            </Box>
           </Box>
         </Box>
       </Paper>
 
-      {/* Table Section */}
-      <Fade in={true} timeout={1000}>
+      {/* Table Section (moved up) */}
+      <Fade in={true} timeout={800}>
         <Paper sx={{ 
           border: '1px solid rgba(0,0,0,0.05)',
           borderRadius: '16px',
@@ -1327,7 +1518,7 @@ const RecordsSection = memo(() => {
           ) : (
             <>
               <TableContainer sx={{ 
-                height: 1000, // Increased height to 1000px
+                height: 1000,
                 overflowY: 'auto',
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
@@ -1752,7 +1943,8 @@ const RecordsSection = memo(() => {
                       : selectedRow['Team Website URL']) ||
                       (selectedRow['Team Website'] && typeof selectedRow['Team Website'] === 'object'
                         ? selectedRow['Team Website'].url
-                        : selectedRow['Team Website']);
+                        : selectedRow['Team Website']) ||
+                      '';
                     return siteUrl ? (
                       <Button
                         variant="contained"
@@ -1786,7 +1978,8 @@ const RecordsSection = memo(() => {
                       : selectedRow['Linkedin URL']) ||
                       (selectedRow['Linkedin'] && typeof selectedRow['Linkedin'] === 'object'
                         ? selectedRow['Linkedin'].url
-                        : selectedRow['Linkedin']);
+                        : selectedRow['Linkedin']) ||
+                      '';
                     return linkedUrl ? (
                       <Button
                         variant="contained"
@@ -1962,7 +2155,7 @@ const RecordsSection = memo(() => {
         <DialogTitle>Save as Report</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Enter a name for this report. All currently filtered advisors ({data.length}) will be saved.
+            Enter a name for this report. All currently filtered advisors ({total}) will be saved.
           </Typography>
           <TextField
             label="Report Name"
