@@ -30,8 +30,7 @@ import {
   Tooltip,
   Fade,
   Divider,
-  Chip,
-  IconButton
+  Chip
 } from '@mui/material';
 
 // Import icons
