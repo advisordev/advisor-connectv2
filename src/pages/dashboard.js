@@ -14,7 +14,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem as MenuItemMUI,
   Checkbox,
   ListItemText,
   TextField,
@@ -67,7 +66,7 @@ const columns = [
   { key: 'Province',   label: 'Province' },
 ];
 
-// Enhanced Custom style for multi-select menu items - KEY FIX FOR DROPDOWN VISIBILITY
+// Enhanced Custom style for multi-select menu items
 const MenuProps = {
   PaperProps: {
     style: {
@@ -588,8 +587,6 @@ const RecordsSection = memo(() => {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [newReportName, setNewReportName] = useState('');
   
-  // New state for expanded filters
-  const [expandedFilters, setExpandedFilters] = useState(false);
   
   // Cache for storing the full dataset for client-side operations
   const [filteredDataCache, setFilteredDataCache] = useState({
@@ -1079,11 +1076,6 @@ const RecordsSection = memo(() => {
       tempFilterFavorites, tempFilterReports, provinceDropdownOpen, 
       cityDropdownOpen, firmDropdownOpen, teamDropdownOpen, filterOptionsCache]);
 
-  // Debounced version of fetch filter options to avoid too many API calls
-  const debouncedFetchFilterOptions = useMemo(
-    () => debounce(fetchFilterOptions, 300),
-    [fetchFilterOptions]
-  );
 
   // Effect to fetch filter options when dropdowns open
   useEffect(() => {
@@ -1476,7 +1468,7 @@ const RecordsSection = memo(() => {
   }, [page, total, limit, handlePageChange]);
 
   // Memoized row rendering function
-  const renderRow = useCallback((row, idx) => {
+  const renderRow = useCallback((row) => {
     const uniqueKey = row['Email'] || JSON.stringify(row);
     const isRecentlyFavorited = recentlyFavoritedId === uniqueKey;
     
@@ -2437,7 +2429,7 @@ const RecordsSection = memo(() => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      data.map((row, idx) => renderRow(row, idx))
+                      data.map((row) => renderRow(row))
                     )}
                   </TableBody>
                   </Table>
