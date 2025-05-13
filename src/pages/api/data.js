@@ -1,0 +1,118 @@
+// src/pages/api/data.js
+import mysql from 'mysql2/promise';
+
+export default async function handler(req, res) {
+  // Destructure query params, defaulting as needed
+  const {
+    page = '1',
+    limit = '100',
+    sortBy = 'First Name',
+    sortDir = 'asc',
+    province = '',
+    city = '',
+    firm = '',
+    team = '',
+  } = req.query;
+
+  // Convert numeric strings
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = parseInt(limit, 10) || 100;
+  // The offset for pagination
+  const offset = (pageNum - 1) * limitNum;
+
+  // Database configuration
+  const connectionConfig = {
+    host: 'advisorwebapp.crcke66wq2ed.ca-central-1.rds.amazonaws.com',         // e.g., 'your-database-host'
+    port: 3306,       // Default MySQL port is 3306
+    user: 'Admin',         // Your MySQL username
+    password: '28UKOJi3OshzZT',     // Your MySQL password
+    database: 'advisor_dashboard'      // Your database name
+  };
+
+  // Handle multi-select filters for province, city, firm, team
+  // Parse comma-separated values into arrays
+  const provinces = province ? province.split(',') : [];
+  const cities = city ? city.split(',') : [];
+  const firms = firm ? firm.split(',') : [];
+  const teams = team ? team.split(',') : [];
+
+  try {
+    const conn = await mysql.createConnection(connectionConfig);
+
+    // Build WHERE clause for filtering
+    const conditions = [];
+    const params = [];
+
+    // Add conditions for each filter if they have values
+    if (provinces.length > 0) {
+      const placeholders = provinces.map(() => '?').join(',');
+      conditions.push(`TRIM(Province) IN (${placeholders})`);
+      params.push(...provinces);
+    }
+
+    if (cities.length > 0) {
+      const placeholders = cities.map(() => '?').join(',');
+      conditions.push(`TRIM(City) IN (${placeholders})`);
+      params.push(...cities);
+    }
+
+    if (firms.length > 0) {
+      const placeholders = firms.map(() => '?').join(',');
+      conditions.push(`TRIM(Firm) IN (${placeholders})`);
+      params.push(...firms);
+    }
+
+    if (teams.length > 0) {
+      const placeholders = teams.map(() => '?').join(',');
+      conditions.push(`TRIM(\`Team Name\`) IN (${placeholders})`);
+      params.push(...teams);
+    }
+
+    // Combine all conditions with AND
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Count query for total results
+    const countQuery = `
+      SELECT COUNT(*) AS count
+      FROM \`data\`
+      ${whereClause}
+    `;
+
+    // Main data query with sorting and pagination
+    // Basic sanitization for column names and sort direction
+    const safeColumn = sortBy.replace(/[^a-zA-Z0-9_ ]/g, '');
+    const safeDirection = sortDir.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+    
+    const dataQuery = `
+      SELECT *
+      FROM \`data\`
+      ${whereClause}
+      ORDER BY \`${safeColumn}\` ${safeDirection}
+      LIMIT ? OFFSET ?
+    `;
+
+    // Execute count query
+    const [countResult] = await conn.query(countQuery, params);
+    const total = countResult[0].count || 0;
+
+    // Execute data query with pagination parameters
+    const dataParams = [...params, limitNum, offset];
+    const [rows] = await conn.query(dataQuery, dataParams);
+
+    await conn.end();
+
+    // Log the response for debugging
+    console.log(`API /data response: ${rows.length} rows, total: ${total}`);
+
+    // Return the data with pagination info
+    res.status(200).json({
+      data: rows,
+      total,
+      page: pageNum,
+      limit: limitNum,
+    });
+  } catch (err) {
+    console.error("API /data error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
