@@ -159,8 +159,8 @@ export default function Favorites() {
     <Image
       src="/logo.png" 
       alt="Advisor Connect"
-      width={268}         // Changed from 150 to 268 to match Dashboard
-      height={100}        // Changed from 56 to 100 to match Dashboard
+      width={268}         
+      height={100}        
       style={{
         marginRight: '24px',
         objectFit: 'contain',
@@ -256,34 +256,7 @@ export default function Favorites() {
       About
     </Button>
     
-    {/* Account Button - Active on Favorites page */}
-    <Button
-      sx={{
-        color: '#000000',
-        fontWeight: 600,
-        fontSize: '1rem',
-        textTransform: 'none',
-        borderRadius: '10px',
-        px: 3,
-        py: 1,
-        position: 'relative',
-        overflow: 'hidden',
-        border: '1px solid rgba(0, 0, 0, 0.1)',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        transition: 'all 0.3s ease',
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          bottom: 0,
-          left: '10%',
-          width: '80%',
-          height: '2px',
-          backgroundColor: '#000000',
-        }
-      }}
-    >
-      Account
-    </Button>
+    <AccountMenu />
   </Box>
 </Box>
 
@@ -1137,7 +1110,7 @@ function AccountMenu() {
     handleMouseLeave();
   };
   const handleReports = () => {
-    // Already on reports page, no navigation needed
+    window.location.href = '/reports';
     handleMouseLeave();
   };
   const handleLogout = () => {
@@ -1153,7 +1126,7 @@ function AccountMenu() {
     >
       <Button
         sx={{
-          color: '#1E293B',
+          color: '#000000',
           fontWeight: 600,
           fontSize: { xs: '0.9rem', sm: '1rem' }, // Smaller font on mobile
           textTransform: 'none',
@@ -1162,8 +1135,8 @@ function AccountMenu() {
           py: 1,
           position: 'relative',
           overflow: 'hidden',
-          border: '1px solid transparent',
-          backgroundColor: 'transparent',
+          border: '1px solid rgba(0, 0, 0, 0.1)', 
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
           transition: 'all 0.3s ease',
           '&:hover': {
             color: '#000000',
@@ -1175,8 +1148,8 @@ function AccountMenu() {
             content: '""',
             position: 'absolute',
             bottom: 0,
-            left: '50%',
-            width: 0,
+            left: '10%',
+            width: '80%',
             height: '2px',
             backgroundColor: '#000000',
             transition: 'all 0.3s ease',
@@ -1238,6 +1211,9 @@ function AccountMenu() {
             py: 1.5,
             px: 2.5,
             fontSize: '0.95rem',
+            backgroundColor: '#f8fafc',
+            color: '#000000', 
+            fontWeight: 600,
             '&:hover': {
               backgroundColor: '#f8fafc'
             }
@@ -1251,9 +1227,9 @@ function AccountMenu() {
             py: 1.5,
             px: 2.5,
             fontSize: '0.95rem',
-            backgroundColor: '#f8fafc',
-            color: '#000000',
-            fontWeight: 600
+            '&:hover': {
+              backgroundColor: '#f8fafc'
+            }
           }}
         >
           Report List

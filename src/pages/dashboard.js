@@ -608,31 +608,23 @@ const RecordsSection = memo(() => {
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
   // Create debounced filter change handlers to improve performance
-  const debouncedSetTempFilterProvince = useCallback(
-    debounce((value) => {
-      setTempFilterProvince(value);
-    }, 100),
+  const debouncedSetTempFilterProvince = useMemo(
+    () => debounce((value) => setTempFilterProvince(value), 100),
     []
   );
   
-  const debouncedSetTempFilterCity = useCallback(
-    debounce((value) => {
-      setTempFilterCity(value);
-    }, 100),
+  const debouncedSetTempFilterCity = useMemo(
+    () => debounce((value) => setTempFilterCity(value), 100),
     []
   );
   
-  const debouncedSetTempFilterFirm = useCallback(
-    debounce((value) => {
-      setTempFilterFirm(value);
-    }, 100),
+  const debouncedSetTempFilterFirm = useMemo(
+    () => debounce((value) => setTempFilterFirm(value), 100),
     []
   );
   
-  const debouncedSetTempFilterTeam = useCallback(
-    debounce((value) => {
-      setTempFilterTeam(value);
-    }, 100),
+  const debouncedSetTempFilterTeam = useMemo(
+    () => debounce((value) => setTempFilterTeam(value), 100),
     []
   );
 
