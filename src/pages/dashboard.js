@@ -1500,8 +1500,11 @@ const processFavoritesData = useCallback(async () => {
   }, [page, total, limit, handlePageChange]);
 
   // Memoized row rendering function
-  const renderRow = useCallback((row) => {
-    const uniqueKey = row['Email'] || JSON.stringify(row);
+  const renderRow = useCallback((row, index) => {
+    // Create a unique key using multiple fields and index as fallback
+    const uniqueKey = row['Email'] 
+      ? `${row['Email']}_${row['First Name']}_${row['Last Name']}_${index}`
+      : `${row['First Name']}_${row['Last Name']}_${row['Firm']}_${row['City']}_${index}`;
     const isRecentlyFavorited = recentlyFavoritedId === uniqueKey;
     
     return (
