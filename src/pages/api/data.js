@@ -118,7 +118,7 @@ export default async function handler(req, res) {
     // Return the deduplicated data with pagination info
     res.status(200).json({
       data: uniqueRows,
-      total: uniqueRows.length,
+      total: total,
       page: pageNum,
       limit: limitNum,
     });
