@@ -1327,7 +1327,7 @@ function AccountMenu() {
       >
         <Button
           sx={{
-            color: '#1E293B',
+            color: '#000000',
             fontWeight: 600,
             fontSize: { xs: '0.9rem', sm: '1rem' }, // Smaller font on mobile
             textTransform: 'none',
@@ -1336,8 +1336,8 @@ function AccountMenu() {
             py: 1,
             position: 'relative',
             overflow: 'hidden',
-            border: '1px solid transparent',
-            backgroundColor: 'transparent',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
             transition: 'all 0.3s ease',
             '&:hover': {
               color: '#000000',
@@ -1349,8 +1349,8 @@ function AccountMenu() {
               content: '""',
               position: 'absolute',
               bottom: 0,
-              left: '50%',
-              width: 0,
+              left: '10%',
+              width: '80%',
               height: '2px',
               backgroundColor: '#000000',
               transition: 'all 0.3s ease',

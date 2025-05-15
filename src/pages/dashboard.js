@@ -33,6 +33,7 @@ import {
   Fade,
   Divider,
   Chip,
+  OutlinedInput,
   CircularProgress
 } from '@mui/material';
 
@@ -435,7 +436,7 @@ const Dashboard = () => {
           <Button
             onClick={handleHome}
             sx={{
-              color: '#1E293B',
+              color: '#000000',
               fontWeight: 600,
               fontSize: { xs: '0.9rem', sm: '1rem' },
               textTransform: 'none',
@@ -444,8 +445,8 @@ const Dashboard = () => {
               py: 1,
               position: 'relative',
               overflow: 'hidden',
-              border: '1px solid transparent',
-              backgroundColor: 'transparent',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
               transition: 'all 0.3s ease',
               '&:hover': {
                 color: '#000000',
@@ -457,8 +458,8 @@ const Dashboard = () => {
                 content: '""',
                 position: 'absolute',
                 bottom: 0,
-                left: '50%',
-                width: 0,
+                left: '10%',
+                width: '80%',
                 height: '2px',
                 backgroundColor: '#000000',
                 transition: 'all 0.3s ease',
@@ -689,99 +690,108 @@ const RecordsSection = memo(() => {
   }, [page, limit]);
 
   // Helper function to process favorites data - memoized
-  const processFavoritesData = useCallback(async () => {
-    setLoading(true);
+  // Replace the current processFavoritesData function with this:
+const processFavoritesData = useCallback(async () => {
+  setLoading(true);
+  
+  try {
+    // Get the favorites list
+    const favoritesList = getFavoriteLists()[filterFavorites] || [];
+    const favoritesEmails = favoritesList.map(item => item.Email);
     
-    try {
-      // Check if we have cached data
-      if (filteredDataCache.favorites[filterFavorites]) {
-        const sortedData = applySorting(filteredDataCache.favorites[filterFavorites]);
-        setData(applyPagination(sortedData));
-        setTotal(sortedData.length);
-        setLoading(false);
-        return;
-      }
-      
-      const favoritesList = getFavoriteLists()[filterFavorites] || [];
-      const favoritesEmails = favoritesList.map(item => item.Email);
-      
-      if (favoritesEmails.length === 0) {
-        setData([]);
-        setTotal(0);
-        setLoading(false);
-        return;
-      }
-      
-      // Fetch all data matching other filters, then filter by favorites
-      const params = new URLSearchParams();
-      
-      // Set page and limit parameters
-      params.append('page', '1');
-      params.append('limit', '10000'); // Get all matching records
-      
-      // Add filter arrays as comma-separated values
-      if (filterProvince.length > 0) {
-        params.append('province', filterProvince.join(','));
-      }
-      
-      if (filterCity.length > 0) {
-        params.append('city', filterCity.join(','));
-      }
-      
-      if (filterFirm.length > 0) {
-        params.append('firm', filterFirm.join(','));
-      }
-      
-      if (filterTeam.length > 0) {
-        params.append('team', filterTeam.join(','));
-      }
-      
-      const response = await fetch(`/api/data?${params.toString()}`);
-      const result = await response.json();
-      
-      if (!result || !Array.isArray(result.data)) {
-        throw new Error('API returned unexpected data format');
-      }
-      
-      // Filter by favorites
-      const filteredData = result.data.filter(row => 
-        favoritesEmails.includes(row.Email)
-      );
-      
-      // Cache the filtered data
-      setFilteredDataCache(prev => ({
-        ...prev,
-        favorites: {
-          ...prev.favorites,
-          [filterFavorites]: filteredData
-        }
-      }));
-      
-      // Apply sorting and pagination
-      const sortedData = applySorting(filteredData);
-      setData(applyPagination(sortedData));
-      setTotal(filteredData.length);
-    } catch (err) {
-      console.error('Error processing favorites data:', err);
-      setError(err.message || 'Failed to process favorites data');
+    if (favoritesEmails.length === 0) {
       setData([]);
       setTotal(0);
-    } finally {
       setLoading(false);
+      return;
     }
-  }, [filterFavorites, filterProvince, filterCity, filterFirm, filterTeam, 
-      getFavoriteLists, applySorting, applyPagination, filteredDataCache]);
+    
+    // Check if we have cached data
+    const cacheKey = `${filterProvince.join(',')}_${filterCity.join(',')}_${filterFirm.join(',')}_${filterTeam.join(',')}_${filterFavorites}`;
+    
+    if (filteredDataCache.favorites[cacheKey]) {
+      const cachedData = filteredDataCache.favorites[cacheKey];
+      const sortedData = applySorting(cachedData);
+      setTotal(sortedData.length);
+      setData(applyPagination(sortedData));
+      setLoading(false);
+      return;
+    }
+    
+    // Fetch all data matching other filters
+    const params = new URLSearchParams();
+    
+    // Set page and limit parameters to get all records
+    params.append('page', '1');
+    params.append('limit', '10000'); // Get all matching records
+    
+    // Add filter arrays as comma-separated values
+    if (filterProvince.length > 0) {
+      params.append('province', filterProvince.join(','));
+    }
+    
+    if (filterCity.length > 0) {
+      params.append('city', filterCity.join(','));
+    }
+    
+    if (filterFirm.length > 0) {
+      params.append('firm', filterFirm.join(','));
+    }
+    
+    if (filterTeam.length > 0) {
+      params.append('team', filterTeam.join(','));
+    }
+    
+    const response = await fetch(`/api/data?${params.toString()}`);
+    const result = await response.json();
+    
+    if (!result || !Array.isArray(result.data)) {
+      throw new Error('API returned unexpected data format');
+    }
+    
+    // Filter by favorites - ONLY include rows that are in the favorites list
+    const filteredData = result.data.filter(row => 
+      favoritesEmails.includes(row.Email)
+    );
+    
+    // Cache the filtered data with the full cache key
+    setFilteredDataCache(prev => ({
+      ...prev,
+      favorites: {
+        ...prev.favorites,
+        [cacheKey]: filteredData
+      }
+    }));
+    
+    // Apply sorting and pagination to the filtered data
+    const sortedData = applySorting(filteredData);
+    setTotal(filteredData.length); // Set total to the filtered data length
+    setData(applyPagination(sortedData)); // Apply pagination to sorted data
+  } catch (err) {
+    console.error('Error processing favorites data:', err);
+    setError(err.message || 'Failed to process favorites data');
+    setData([]);
+    setTotal(0);
+  } finally {
+    setLoading(false);
+  }
+}, [filterFavorites, filterProvince, filterCity, filterFirm, filterTeam, 
+    getFavoriteLists, applySorting, applyPagination, filteredDataCache]);
 
   // Helper function to process report data - memoized
   const processReportData = useCallback(() => {
     setLoading(true);
     
     try {
-      // Check if we have cached data
-      if (filteredDataCache.reports[filterReports]) {
-        const sortedData = applySorting(filteredDataCache.reports[filterReports]);
-        setData(applyPagination(sortedData));
+      // Create a cache key that includes all current filters
+      const cacheKey = `${filterProvince.join(',')}_${filterCity.join(',')}_${filterFirm.join(',')}_${filterTeam.join(',')}_${filterReports}`;
+      
+      // Check if we have cached data with the current filter combination
+      if (filteredDataCache.reports[cacheKey]) {
+        const cachedData = filteredDataCache.reports[cacheKey];
+        const sortedData = applySorting(cachedData);
         setTotal(sortedData.length);
+        setData(applyPagination(sortedData));
         setLoading(false);
         return;
       }
@@ -789,19 +799,42 @@ const RecordsSection = memo(() => {
       const reports = getReportLists();
       const reportData = reports[filterReports] || [];
       
-      // Cache the report data
+      // If there are other filters active, we need to filter the report data
+      let filteredReportData = reportData;
+      
+      if (filterProvince.length > 0 || filterCity.length > 0 || 
+          filterFirm.length > 0 || filterTeam.length > 0) {
+        // Apply filters to the report data
+        filteredReportData = reportData.filter(row => {
+          if (filterProvince.length > 0 && !filterProvince.includes(row.Province)) {
+            return false;
+          }
+          if (filterCity.length > 0 && !filterCity.includes(row.City)) {
+            return false;
+          }
+          if (filterFirm.length > 0 && !filterFirm.includes(row.Firm)) {
+            return false;
+          }
+          if (filterTeam.length > 0 && !filterTeam.includes(row['Team Name'])) {
+            return false;
+          }
+          return true;
+        });
+      }
+      
+      // Cache the filtered report data
       setFilteredDataCache(prev => ({
         ...prev,
         reports: {
           ...prev.reports,
-          [filterReports]: reportData
+          [cacheKey]: filteredReportData
         }
       }));
       
       // Apply sorting and pagination
-      const sortedData = applySorting(reportData);
+      const sortedData = applySorting(filteredReportData);
+      setTotal(filteredReportData.length);
       setData(applyPagination(sortedData));
-      setTotal(reportData.length);
     } catch (err) {
       console.error('Error processing report data:', err);
       setError(err.message || 'Failed to process report data');
@@ -810,7 +843,8 @@ const RecordsSection = memo(() => {
     } finally {
       setLoading(false);
     }
-  }, [filterReports, getReportLists, applySorting, applyPagination, filteredDataCache]);
+  }, [filterReports, filterProvince, filterCity, filterFirm, filterTeam, 
+      getReportLists, applySorting, applyPagination, filteredDataCache]);
 
   // Save current filtered data as report
   const saveAsReport = useCallback(async () => {
@@ -829,15 +863,20 @@ const RecordsSection = memo(() => {
 
     try {
       let reportData = [];
+
+        // Create cache key for favorites
+      const favoritesCacheKey = `${filterProvince.join(',')}_${filterCity.join(',')}_${filterFirm.join(',')}_${filterTeam.join(',')}_${filterFavorites}`;
+      // Create cache key for reports  
+      const reportsCacheKey = `${filterProvince.join(',')}_${filterCity.join(',')}_${filterFirm.join(',')}_${filterTeam.join(',')}_${filterReports}`;
       
-      // If filtering by favorites, use cached favorites data
-      if (filterFavorites && filteredDataCache.favorites[filterFavorites]) {
-        reportData = filteredDataCache.favorites[filterFavorites];
-      } 
-      // If filtering by another report, use that report's data
-      else if (filterReports && filteredDataCache.reports[filterReports]) {
-        reportData = filteredDataCache.reports[filterReports];
-      } 
+       // If filtering by favorites, use cached favorites data
+    if (filterFavorites && filteredDataCache.favorites[favoritesCacheKey]) {
+      reportData = filteredDataCache.favorites[favoritesCacheKey];
+    } 
+    // If filtering by another report, use that report's cached data
+    else if (filterReports && filteredDataCache.reports[reportsCacheKey]) {
+      reportData = filteredDataCache.reports[reportsCacheKey];
+    } 
       // Otherwise fetch all data with current filters
       else {
         const params = new URLSearchParams();
@@ -959,6 +998,7 @@ const RecordsSection = memo(() => {
       favorites: {},
       reports: {}
     });
+    setPage(1);
   }, [filterProvince, filterCity, filterFirm, filterTeam]);
 
   // Optimized function to fetch filter options - now with debouncing and lazy loading
@@ -1772,9 +1812,10 @@ const RecordsSection = memo(() => {
                     MenuProps={MenuProps}
                     onOpen={() => setProvinceDropdownOpen(true)}
                     onClose={() => setProvinceDropdownOpen(false)}
+                    input={<OutlinedInput label="Province" />}
                     renderValue={(selected) => {
                       if (selected.length === 0) {
-                        return 'All Provinces';
+                        return <em>All Provinces</em>;
                       }
                       return selected.length > 1 
                         ? `${selected.length} provinces selected` 
@@ -1799,7 +1840,9 @@ const RecordsSection = memo(() => {
                         <CircularProgress size={24} sx={{ color: '#E5D3BC' }} />
                       </Box>
                     ) : provinceOptions.length === 0 ? (
-                      <MenuItem disabled>No provinces available</MenuItem>
+                      <MenuItem disabled value="">
+                        <ListItemText primary="No provinces available" />
+                        </MenuItem>
                     ) : (
                       provinceOptions.map((p) => (
                         <MenuItem key={p} value={p}>
@@ -1838,9 +1881,10 @@ const RecordsSection = memo(() => {
                     MenuProps={MenuProps}
                     onOpen={() => setCityDropdownOpen(true)}
                     onClose={() => setCityDropdownOpen(false)}
+                    input={<OutlinedInput label="City" />}
                     renderValue={(selected) => {
                       if (selected.length === 0) {
-                        return 'All Cities';
+                        return <em>All Cities</em>;
                       }
                       return selected.length > 1 
                         ? `${selected.length} cities selected` 
@@ -1865,7 +1909,9 @@ const RecordsSection = memo(() => {
                         <CircularProgress size={24} sx={{ color: '#E5D3BC' }} />
                       </Box>
                     ) : cityOptions.length === 0 ? (
-                      <MenuItem disabled>No cities available</MenuItem>
+                      <MenuItem disabled value="">
+                        <ListItemText primary="No cities available" />
+                        </MenuItem>
                     ) : (
                       cityOptions.map((c) => (
                         <MenuItem key={c} value={c}>
@@ -1904,9 +1950,10 @@ const RecordsSection = memo(() => {
                     MenuProps={MenuProps}
                     onOpen={() => setFirmDropdownOpen(true)}
                     onClose={() => setFirmDropdownOpen(false)}
+                    input={<OutlinedInput label="Firm" />}
                     renderValue={(selected) => {
                       if (selected.length === 0) {
-                        return 'All Firms';
+                        return <em>All Firms</em>;
                       }
                       return selected.length > 1 
                         ? `${selected.length} firms selected` 
@@ -1931,7 +1978,9 @@ const RecordsSection = memo(() => {
                         <CircularProgress size={24} sx={{ color: '#E5D3BC' }} />
                       </Box>
                     ) : firmOptions.length === 0 ? (
-                      <MenuItem disabled>No firms available</MenuItem>
+                      <MenuItem disabled value="">
+                      <ListItemText primary="No firms available" />
+                      </MenuItem>
                     ) : (
                       firmOptions.map((f) => (
                         <MenuItem key={f} value={f}>
@@ -1970,9 +2019,10 @@ const RecordsSection = memo(() => {
                     MenuProps={TeamMenuProps}
                     onOpen={() => setTeamDropdownOpen(true)}
                     onClose={() => setTeamDropdownOpen(false)}
+                    input={<OutlinedInput label="Team" />}
                     renderValue={(selected) => {
                       if (selected.length === 0) {
-                        return 'All Teams';
+                        return <em>All Teams</em>;
                       }
                       return selected.length > 1 
                         ? `${selected.length} teams selected` 
@@ -1997,7 +2047,9 @@ const RecordsSection = memo(() => {
                         <CircularProgress size={24} sx={{ color: '#E5D3BC' }} />
                       </Box>
                     ) : teamOptions.length === 0 ? (
-                      <MenuItem disabled>No teams available</MenuItem>
+                      <MenuItem disabled value="">
+                        <ListItemText primary="No teams available" />
+                        </MenuItem>
                     ) : (
                       teamOptions.map((t) => (
                         <MenuItem key={t} value={t}>
