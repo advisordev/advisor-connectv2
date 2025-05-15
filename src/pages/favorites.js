@@ -143,76 +143,122 @@ export default function Favorites() {
 
       {/* Header/Navigation Bar */}
       <Box
-        sx={{
-          background: 'linear-gradient(90deg, #E5D3BC 0%, #e9d9c6 100%)',
-          width: '100%',
-          px: '50px',
-          py: 2,
-          display: 'flex',
-          alignItems: 'center',
-          boxSizing: 'border-box',
-          borderBottom: '1px solid rgba(0,0,0,0.08)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
-        }}
-      >
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-          <Image
-            src="/logo.png" 
-            alt="Advisor Connect"
-            width={150}         
-            height={56}         
-            style={{
-              marginRight: '24px',
-              objectFit: 'contain',
-              marginLeft: '-8px',
-              transition: 'transform 0.2s ease-in-out',
-              cursor: 'pointer'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onClick={handleHome}
-          />
-        </Box>
-        <Button
-          onClick={handleHome}
-          sx={{
-            color: '#374151',
-            fontWeight: 600,
-            mr: 3,
-            fontSize: '1rem',
-            textTransform: 'none',
-            borderRadius: '8px',
-            px: 2,
-            py: 1,
-            '&:hover': { 
-              color: '#000000',
-              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-            },
-          }}
-        >
-          Home
-        </Button>
-        <Button
-          onClick={handleAbout}
-          sx={{
-            color: '#374151',
-            fontWeight: 600,
-            mr: 3,
-            fontSize: '1rem',
-            textTransform: 'none',
-            borderRadius: '8px',
-            px: 2,
-            py: 1,
-            '&:hover': { 
-              color: '#000000',
-              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-            },
-          }}
-        >
-          About
-        </Button>
-        <AccountMenu />
-      </Box>
+  sx={{
+    background: 'linear-gradient(90deg, #E5D3BC 0%, #e9d9c6 100%)',
+    width: '100%',
+    px: '50px',
+    py: 1.5,
+    display: 'flex',
+    alignItems: 'center',
+    boxSizing: 'border-box',
+    borderBottom: '1px solid rgba(0,0,0,0.08)',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+  }}
+>
+  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+    <Image
+      src="/logo.png" 
+      alt="Advisor Connect"
+      width={268}         
+      height={100}        
+      style={{
+        marginRight: '24px',
+        objectFit: 'contain',
+        marginLeft: '-8px',
+        transition: 'transform 0.2s ease-in-out',
+        cursor: 'pointer'
+      }}
+      onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+      onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      onClick={handleHome}
+    />
+  </Box>
+  
+  {/* Improved Navigation Buttons */}
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Button
+      onClick={handleHome}
+      sx={{
+        color: '#1E293B',
+        fontWeight: 600,
+        fontSize: '1rem',
+        textTransform: 'none',
+        borderRadius: '10px',
+        px: 3,
+        py: 1,
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid transparent',
+        backgroundColor: 'transparent',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          color: '#000000',
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          borderColor: 'rgba(0, 0, 0, 0.1)',
+          transform: 'translateY(-2px)',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          width: 0,
+          height: '2px',
+          backgroundColor: '#000000',
+          transition: 'all 0.3s ease',
+        },
+        '&:hover::after': {
+          width: '80%',
+          left: '10%',
+        }
+      }}
+    >
+      Home
+    </Button>
+    
+    <Button
+      onClick={handleAbout}
+      sx={{
+        color: '#1E293B',
+        fontWeight: 600,
+        fontSize: '1rem',
+        textTransform: 'none',
+        borderRadius: '10px',
+        px: 3,
+        py: 1,
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid transparent',
+        backgroundColor: 'transparent',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          color: '#000000',
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          borderColor: 'rgba(0, 0, 0, 0.1)',
+          transform: 'translateY(-2px)',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          width: 0,
+          height: '2px',
+          backgroundColor: '#000000',
+          transition: 'all 0.3s ease',
+        },
+        '&:hover::after': {
+          width: '80%',
+          left: '10%',
+        }
+      }}
+    >
+      About
+    </Button>
+    
+    <AccountMenu />
+  </Box>
+</Box>
 
       {/* Main Content */}
       <Box sx={{ 
@@ -818,7 +864,7 @@ export default function Favorites() {
                               textTransform: 'none',
                               fontWeight: 500,
                               fontSize: '1rem',
-                              '&:hover': { backgroundColor: 'transparent', color: '#000000' }
+                              '&:hover': { backgroundColor: 'transparent', color: '#1D4ED8' }
                             }}
                           >
                             {selectedRow['Business Phone'].replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}
@@ -839,7 +885,7 @@ export default function Favorites() {
                           <Button 
                             onClick={() => window.open(`mailto:${selectedRow['Email']}`, '_blank')}
                             sx={{ 
-                              color: '#000000', 
+                              color: '#1D4ED8', 
                               p: 0, 
                               textTransform: 'none',
                               fontWeight: 500,
@@ -1060,7 +1106,7 @@ function AccountMenu() {
     handleMouseLeave();
   };
   const handleFavorites = () => {
-    // Already on favorites page, no navigation needed
+    window.location.href = '/favorites';
     handleMouseLeave();
   };
   const handleReports = () => {
@@ -1080,17 +1126,38 @@ function AccountMenu() {
     >
       <Button
         sx={{
-          color: '#374151',
+          color: '#000000',
           fontWeight: 600,
+          fontSize: { xs: '0.9rem', sm: '1rem' }, // Smaller font on mobile
           textTransform: 'none',
-          fontSize: '1rem',
-          borderRadius: '8px',
-          px: 2,
+          borderRadius: '10px',
+          px: { xs: 2, sm: 3 }, // Smaller padding on mobile
           py: 1,
-          '&:hover': { 
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid rgba(0, 0, 0, 0.1)', 
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
             color: '#000000',
-            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            borderColor: 'rgba(0, 0, 0, 0.1)',
+            transform: 'translateY(-2px)',
           },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: '10%',
+            width: '80%',
+            height: '2px',
+            backgroundColor: '#000000',
+            transition: 'all 0.3s ease',
+          },
+          '&:hover::after': {
+            width: '80%',
+            left: '10%',
+          }
         }}
       >
         Account
@@ -1145,8 +1212,11 @@ function AccountMenu() {
             px: 2.5,
             fontSize: '0.95rem',
             backgroundColor: '#f8fafc',
-            color: '#000000',
-            fontWeight: 600
+            color: '#000000', 
+            fontWeight: 600,
+            '&:hover': {
+              backgroundColor: '#f8fafc'
+            }
           }}
         >
           Favorites

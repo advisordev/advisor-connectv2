@@ -2,107 +2,109 @@
 import mysql from 'mysql2/promise';
 
 export default async function handler(req, res) {
-    // Destructure query params, defaulting as needed
-    const {
-      page = '1',
-      limit = '100',
-      sortBy = 'First Name',     // assume columns match your DB
-      sortDir = 'asc',
-      province = '',
-      city = '',
-      firm = '',
-      team = '',
-    } = req.query;
-  
-    // Convert numeric strings
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 100;
-    // The offset for pagination
-    const offset = (pageNum - 1) * limitNum;
-  
-    // Basic sanitization for column name. Or map known keys (like a switch).
-    let orderColumn = sortBy.replace(/[^a-zA-Z0-9_ ]/g, '');
-    let direction = (sortDir === 'desc') ? 'DESC' : 'ASC';
-  
-    // Build the WHERE clause to handle filters if not empty.
-    // We'll use an array of conditions, then join with AND.
-    // For instance: (province='' OR Province=?)
-    // means if province is empty we ignore that filter,
-    // else we require a match.
-  
-    // We'll build placeholders for each filter that isn't empty.
-    // e.g. "((?='') OR Province=?)" approach
-    const whereClauses = [];
-    const values = [];
-  
-    // Province filter
-    // "((? = '') OR Province = ?)" => first param is the province value, 
-    // if it's '' we skip; second param is the actual value if not ''.
-    whereClauses.push(`((? = '') OR Province = ?)`);
-    values.push(province, province);
-  
-    // City filter
-    whereClauses.push(`((? = '') OR City = ?)`);
-    values.push(city, city);
-  
-    // Firm filter
-    whereClauses.push(`((? = '') OR Firm = ?)`);
-    values.push(firm, firm);
-  
-    // Team filter
-    whereClauses.push(`((? = '') OR \`Team Name\` = ?)`);
-    values.push(team, team);
-  
-    // Join them with AND
-    const whereString = whereClauses.join(' AND ');
-  
-    // For LIMIT/OFFSET, we can't use placeholders for older MySQL versions in prepared statements
-    // So we might do string interpolation. We'll do a numeric check for safety.
-    const safeLimit = Number.isNaN(limitNum) ? 100 : limitNum;
-    const safeOffset = Number.isNaN(offset) ? 0 : offset;
-  
-    // Build final query string
-    // ORDER BY backticks around the column name
-    // direction is either ASC or DESC
-    const queryString = `
-      SELECT *
-      FROM \`data\`
-      WHERE ${whereString}
-      ORDER BY \`${orderColumn}\` ${direction}
-      LIMIT ${safeLimit}
-      OFFSET ${safeOffset}
-    `;
-  
-    // We'll also need a separate COUNT query to get the total matched rows
-    const countQuery = `
-      SELECT COUNT(*) AS count
-      FROM \`data\`
-      WHERE ${whereString}
-    `;
+  // Destructure query params, defaulting as needed
+  const {
+    page = '1',
+    limit = '100',
+    sortBy = 'First Name',
+    sortDir = 'asc',
+    province = '',
+    city = '',
+    firm = '',
+    team = '',
+  } = req.query;
 
+  // Convert numeric strings
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = parseInt(limit, 10) || 100;
+  // The offset for pagination
+  const offset = (pageNum - 1) * limitNum;
+
+  // Database configuration
   const connectionConfig = {
-    host: 'advisorwebapp.crcke66wq2ed.ca-central-1.rds.amazonaws.com',   // e.g., 'localhost' or 'mydbinstance.abc123xyz.us-east-1.rds.amazonaws.com'
-    port: 3306,                        // Default MySQL port is 3306
-    user: 'Admin',    // Replace with your actual MySQL username
-    password: '28UKOJi3OshzZT', // Replace with your actual MySQL password
-    database: 'advisor_dashboard' // Replace with your actual database name
+    host: 'advisorwebapp.crcke66wq2ed.ca-central-1.rds.amazonaws.com',         // e.g., 'your-database-host'
+    port: 3306,       // Default MySQL port is 3306
+    user: 'Admin',         // Your MySQL username
+    password: '28UKOJi3OshzZT',     // Your MySQL password
+    database: 'advisor_dashboard'      // Your database name
   };
+
+  // Handle multi-select filters for province, city, firm, team
+  // Parse comma-separated values into arrays
+  const provinces = province ? province.split(',') : [];
+  const cities = city ? city.split(',') : [];
+  const firms = firm ? firm.split(',') : [];
+  const teams = team ? team.split(',') : [];
 
   try {
     const conn = await mysql.createConnection(connectionConfig);
 
-    // First, run the COUNT query
-    const [countResult] = await conn.execute(countQuery, values);
+    // Build WHERE clause for filtering
+    const conditions = [];
+    const params = [];
+
+    // Add conditions for each filter if they have values
+    if (provinces.length > 0) {
+      const placeholders = provinces.map(() => '?').join(',');
+      conditions.push(`TRIM(Province) IN (${placeholders})`);
+      params.push(...provinces);
+    }
+
+    if (cities.length > 0) {
+      const placeholders = cities.map(() => '?').join(',');
+      conditions.push(`TRIM(City) IN (${placeholders})`);
+      params.push(...cities);
+    }
+
+    if (firms.length > 0) {
+      const placeholders = firms.map(() => '?').join(',');
+      conditions.push(`TRIM(Firm) IN (${placeholders})`);
+      params.push(...firms);
+    }
+
+    if (teams.length > 0) {
+      const placeholders = teams.map(() => '?').join(',');
+      conditions.push(`TRIM(\`Team Name\`) IN (${placeholders})`);
+      params.push(...teams);
+    }
+
+    // Combine all conditions with AND
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Count query for total results
+    const countQuery = `
+      SELECT COUNT(*) AS count
+      FROM \`data\`
+      ${whereClause}
+    `;
+
+    // Main data query with sorting and pagination
+    // Basic sanitization for column names and sort direction
+    const safeColumn = sortBy.replace(/[^a-zA-Z0-9_ ]/g, '');
+    const safeDirection = sortDir.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+    
+    const dataQuery = `
+      SELECT *
+      FROM \`data\`
+      ${whereClause}
+      ORDER BY \`${safeColumn}\` ${safeDirection}
+      LIMIT ? OFFSET ?
+    `;
+
+    // Execute count query
+    const [countResult] = await conn.query(countQuery, params);
     const total = countResult[0].count || 0;
 
-    // Next, run the main SELECT for the actual rows
-    // We'll reuse the same values array for the WHERE placeholders
-    // but for the LIMIT/OFFSET, we already baked them into the query string
-    const [rows] = await conn.execute(queryString, values);
+    // Execute data query with pagination parameters
+    const dataParams = [...params, limitNum, offset];
+    const [rows] = await conn.query(dataQuery, dataParams);
 
     await conn.end();
 
-    // Return the data
+    // Log the response for debugging
+    console.log(`API /data response: ${rows.length} rows, total: ${total}`);
+
+    // Return the data with pagination info
     res.status(200).json({
       data: rows,
       total,

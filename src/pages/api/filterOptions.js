@@ -12,6 +12,12 @@ export default async function handler(req, res) {
 
   // Extract query parameters (for cascading filters)
   const { province = '', city = '', firm = '', team = '' } = req.query;
+  
+  // Parse comma-separated values into arrays
+  const provinces = province ? province.split(',') : [];
+  const cities = city ? city.split(',') : [];
+  const firms = firm ? firm.split(',') : [];
+  const teams = team ? team.split(',') : [];
 
   try {
     const conn = await mysql.createConnection(connectionConfig);
@@ -21,17 +27,23 @@ export default async function handler(req, res) {
     // -------------------------------
     let provConditions = "WHERE TRIM(Province) <> ''";
     const provParams = [];
-    if (city) {
-      provConditions += " AND TRIM(City)=?";
-      provParams.push(city);
+    
+    if (cities.length > 0) {
+      const placeholders = cities.map(() => '?').join(',');
+      provConditions += ` AND TRIM(City) IN (${placeholders})`;
+      provParams.push(...cities);
     }
-    if (firm) {
-      provConditions += " AND TRIM(Firm)=?";
-      provParams.push(firm);
+    
+    if (firms.length > 0) {
+      const placeholders = firms.map(() => '?').join(',');
+      provConditions += ` AND TRIM(Firm) IN (${placeholders})`;
+      provParams.push(...firms);
     }
-    if (team) {
-      provConditions += " AND TRIM(`Team Name`)=?";
-      provParams.push(team);
+    
+    if (teams.length > 0) {
+      const placeholders = teams.map(() => '?').join(',');
+      provConditions += ` AND TRIM(\`Team Name\`) IN (${placeholders})`;
+      provParams.push(...teams);
     }
 
     const [provRows] = await conn.query(
@@ -49,17 +61,23 @@ export default async function handler(req, res) {
     // -------------------------------
     let cityConditions = "WHERE TRIM(City) <> ''";
     const cityParams = [];
-    if (province) {
-      cityConditions += " AND TRIM(Province)=?";
-      cityParams.push(province);
+    
+    if (provinces.length > 0) {
+      const placeholders = provinces.map(() => '?').join(',');
+      cityConditions += ` AND TRIM(Province) IN (${placeholders})`;
+      cityParams.push(...provinces);
     }
-    if (firm) {
-      cityConditions += " AND TRIM(Firm)=?";
-      cityParams.push(firm);
+    
+    if (firms.length > 0) {
+      const placeholders = firms.map(() => '?').join(',');
+      cityConditions += ` AND TRIM(Firm) IN (${placeholders})`;
+      cityParams.push(...firms);
     }
-    if (team) {
-      cityConditions += " AND TRIM(`Team Name`)=?";
-      cityParams.push(team);
+    
+    if (teams.length > 0) {
+      const placeholders = teams.map(() => '?').join(',');
+      cityConditions += ` AND TRIM(\`Team Name\`) IN (${placeholders})`;
+      cityParams.push(...teams);
     }
 
     const [cityRows] = await conn.query(
@@ -77,17 +95,23 @@ export default async function handler(req, res) {
     // -------------------------------
     let firmConditions = "WHERE TRIM(Firm) <> ''";
     const firmParams = [];
-    if (province) {
-      firmConditions += " AND TRIM(Province)=?";
-      firmParams.push(province);
+    
+    if (provinces.length > 0) {
+      const placeholders = provinces.map(() => '?').join(',');
+      firmConditions += ` AND TRIM(Province) IN (${placeholders})`;
+      firmParams.push(...provinces);
     }
-    if (city) {
-      firmConditions += " AND TRIM(City)=?";
-      firmParams.push(city);
+    
+    if (cities.length > 0) {
+      const placeholders = cities.map(() => '?').join(',');
+      firmConditions += ` AND TRIM(City) IN (${placeholders})`;
+      firmParams.push(...cities);
     }
-    if (team) {
-      firmConditions += " AND TRIM(`Team Name`)=?";
-      firmParams.push(team);
+    
+    if (teams.length > 0) {
+      const placeholders = teams.map(() => '?').join(',');
+      firmConditions += ` AND TRIM(\`Team Name\`) IN (${placeholders})`;
+      firmParams.push(...teams);
     }
 
     const [firmRows] = await conn.query(
@@ -105,17 +129,23 @@ export default async function handler(req, res) {
     // -------------------------------
     let teamConditions = "WHERE TRIM(`Team Name`) <> ''";
     const teamParams = [];
-    if (province) {
-      teamConditions += " AND TRIM(Province)=?";
-      teamParams.push(province);
+    
+    if (provinces.length > 0) {
+      const placeholders = provinces.map(() => '?').join(',');
+      teamConditions += ` AND TRIM(Province) IN (${placeholders})`;
+      teamParams.push(...provinces);
     }
-    if (city) {
-      teamConditions += " AND TRIM(City)=?";
-      teamParams.push(city);
+    
+    if (cities.length > 0) {
+      const placeholders = cities.map(() => '?').join(',');
+      teamConditions += ` AND TRIM(City) IN (${placeholders})`;
+      teamParams.push(...cities);
     }
-    if (firm) {
-      teamConditions += " AND TRIM(Firm)=?";
-      teamParams.push(firm);
+    
+    if (firms.length > 0) {
+      const placeholders = firms.map(() => '?').join(',');
+      teamConditions += ` AND TRIM(Firm) IN (${placeholders})`;
+      teamParams.push(...firms);
     }
     
     const [teamRows] = await conn.query(
@@ -131,12 +161,25 @@ export default async function handler(req, res) {
     await conn.end();
 
     // Using Set to ensure uniqueness
-    const provinces = [...new Set(provRows.map(r => r.val).filter(Boolean))];
-    const cities    = [...new Set(cityRows.map(r => r.val).filter(Boolean))];
-    const firms     = [...new Set(firmRows.map(r => r.val).filter(Boolean))];
-    const teams     = [...new Set(teamRows.map(r => r.val).filter(Boolean))];
+    const uniqueProvinces = [...new Set(provRows.map(r => r.val).filter(Boolean))];
+    const uniqueCities = [...new Set(cityRows.map(r => r.val).filter(Boolean))];
+    const uniqueFirms = [...new Set(firmRows.map(r => r.val).filter(Boolean))];
+    const uniqueTeams = [...new Set(teamRows.map(r => r.val).filter(Boolean))];
 
-    res.status(200).json({ provinces, cities, firms, teams });
+    // Log the response for debugging
+    console.log("API /filterOptions response:", {
+      provinces: uniqueProvinces.length,
+      cities: uniqueCities.length,
+      firms: uniqueFirms.length,
+      teams: uniqueTeams.length
+    });
+
+    res.status(200).json({ 
+      provinces: uniqueProvinces, 
+      cities: uniqueCities, 
+      firms: uniqueFirms, 
+      teams: uniqueTeams 
+    });
   } catch (err) {
     console.error("API /filterOptions error:", err);
     res.status(500).json({ error: err.message });

@@ -152,74 +152,113 @@ export default function About() {
         }
       `}</style>
 
-      {/* Header/Navigation Bar */}
+      {/* Header/Navigation Bar with Improved Buttons */}
       <Box
-        sx={{
-          background: 'linear-gradient(90deg, #E5D3BC 0%, #e9d9c6 100%)',
-          width: '100%',
-          px: { xs: '20px', md: '50px' },
-          py: 2,
-          display: 'flex',
-          alignItems: 'center',
-          boxSizing: 'border-box',
-          borderBottom: '1px solid rgba(0,0,0,0.08)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
-        }}
-      >
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-          <Image
-            src="/logo.png" 
-            alt="Advisor Connect"
-            width={150}         
-            height={56}         
-            style={{
-              marginRight: '24px',
-              objectFit: 'contain',
-              marginLeft: '-8px',
-              transition: 'transform 0.2s ease-in-out',
-              cursor: 'pointer'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onClick={handleHome}
-          />
-        </Box>
-        <Button
-          onClick={handleHome}
-          sx={{
-            color: '#374151',
-            fontWeight: 600,
-            mr: { xs: 1, md: 3 },
-            fontSize: { xs: '0.9rem', md: '1rem' },
-            textTransform: 'none',
-            borderRadius: '8px',
-            px: { xs: 1.5, md: 2 },
-            py: 1,
-            '&:hover': { 
-              color: '#000000',
-              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-            },
-          }}
-        >
-          Home
-        </Button>
-        <Button
-          sx={{
-            color: '#000000',
-            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-            fontWeight: 600,
-            mr: { xs: 1, md: 3 },
-            fontSize: { xs: '0.9rem', md: '1rem' },
-            textTransform: 'none',
-            borderRadius: '8px',
-            px: { xs: 1.5, md: 2 },
-            py: 1,
-          }}
-        >
-          About
-        </Button>
-        <AccountMenu />
-      </Box>
+  sx={{
+    background: 'linear-gradient(90deg, #E5D3BC 0%, #e9d9c6 100%)',
+    width: '100%',
+    px: { xs: '20px', md: '50px' },
+    py: 1.5,
+    display: 'flex',
+    alignItems: 'center',
+    boxSizing: 'border-box',
+    borderBottom: '1px solid rgba(0,0,0,0.08)',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+  }}
+>
+  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+    <Image
+      src="/logo.png" 
+      alt="Advisor Connect"
+      width={268}         // Changed from 150 to 268 to match Dashboard page
+      height={100}        // Changed from 56 to 100 to match Dashboard page
+      style={{
+        marginRight: '24px',
+        objectFit: 'contain',
+        marginLeft: '-8px',
+        transition: 'transform 0.2s ease-in-out',
+        cursor: 'pointer'
+      }}
+      onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+      onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      onClick={handleHome}
+    />
+  </Box>
+
+  {/* Improved Navigation Buttons */}
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Button
+      onClick={handleHome}
+      sx={{
+        color: '#1E293B',
+        fontWeight: 600,
+        fontSize: '1rem',
+        textTransform: 'none',
+        borderRadius: '10px',
+        px: { xs: 2, md: 3 },
+        py: 1,
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid transparent',
+        backgroundColor: 'transparent',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          color: '#000000',
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          borderColor: 'rgba(0, 0, 0, 0.1)',
+          transform: 'translateY(-2px)',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          width: 0,
+          height: '2px',
+          backgroundColor: '#000000',
+          transition: 'all 0.3s ease',
+        },
+        '&:hover::after': {
+          width: '80%',
+          left: '10%',
+        }
+      }}
+    >
+      Home
+    </Button>
+    
+    {/* About button with active state */}
+    <Button
+      sx={{
+        color: '#000000',
+        fontWeight: 600,
+        fontSize: '1rem',
+        textTransform: 'none',
+        borderRadius: '10px',
+        px: { xs: 2, md: 3 },
+        py: 1,
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid rgba(0, 0, 0, 0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        transition: 'all 0.3s ease',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: '10%',
+          width: '80%',
+          height: '2px',
+          backgroundColor: '#000000',
+        }
+      }}
+    >
+      About
+    </Button>
+    
+    <AccountMenu />
+  </Box>
+</Box>
 
       {/* Main Content */}
       <Box sx={{ 
@@ -327,7 +366,7 @@ export default function About() {
   );
 }
 
-// Account Menu Component
+// Updated Account Menu Component
 function AccountMenu() {
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
@@ -368,17 +407,38 @@ function AccountMenu() {
     >
       <Button
         sx={{
-          color: '#374151',
+          color: '#1E293B',
           fontWeight: 600,
+          fontSize: '1rem',
           textTransform: 'none',
-          fontSize: { xs: '0.9rem', md: '1rem' },
-          borderRadius: '8px',
-          px: { xs: 1.5, md: 2 },
+          borderRadius: '10px',
+          px: { xs: 2, md: 3 },
           py: 1,
-          '&:hover': { 
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid transparent',
+          backgroundColor: 'transparent',
+          transition: 'all 0.3s ease',
+          '&:hover': {
             color: '#000000',
-            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            borderColor: 'rgba(0, 0, 0, 0.1)',
+            transform: 'translateY(-2px)',
           },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            width: 0,
+            height: '2px',
+            backgroundColor: '#000000',
+            transition: 'all 0.3s ease',
+          },
+          '&:hover::after': {
+            width: '80%',
+            left: '10%',
+          }
         }}
       >
         Account
