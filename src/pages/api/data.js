@@ -71,20 +71,21 @@ export default async function handler(req, res) {
     // Combine all conditions with AND
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Count query for total results
+    // Count query for DISTINCT results
     const countQuery = `
-      SELECT COUNT(*) AS count
+      SELECT COUNT(DISTINCT \`Email\`, \`First Name\`, \`Last Name\`, \`Firm\`) AS count
       FROM \`data\`
       ${whereClause}
     `;
 
-    // Main data query with sorting and pagination
+    // Main data query with DISTINCT, sorting and pagination
     // Basic sanitization for column names and sort direction
     const safeColumn = sortBy.replace(/[^a-zA-Z0-9_ ]/g, '');
     const safeDirection = sortDir.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
     
+    // Using DISTINCT to remove duplicates
     const dataQuery = `
-      SELECT *
+      SELECT DISTINCT *
       FROM \`data\`
       ${whereClause}
       ORDER BY \`${safeColumn}\` ${safeDirection}
@@ -101,13 +102,23 @@ export default async function handler(req, res) {
 
     await conn.end();
 
-    // Log the response for debugging
-    console.log(`API /data response: ${rows.length} rows, total: ${total}`);
+    // Additional server-side deduplication as a safety measure
+    const uniqueRows = rows.reduce((acc, row) => {
+      const key = `${row.Email}_${row['First Name']}_${row['Last Name']}_${row.Firm}`;
+      if (!acc.map.has(key)) {
+        acc.map.set(key, true);
+        acc.result.push(row);
+      }
+      return acc;
+    }, { map: new Map(), result: [] }).result;
 
-    // Return the data with pagination info
+    // Log the response for debugging
+    console.log(`API /data response: ${uniqueRows.length} unique rows (from ${rows.length} total), total: ${total}`);
+
+    // Return the deduplicated data with pagination info
     res.status(200).json({
-      data: rows,
-      total,
+      data: uniqueRows,
+      total: uniqueRows.length,
       page: pageNum,
       limit: limitNum,
     });
